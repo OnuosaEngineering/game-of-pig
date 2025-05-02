@@ -42,14 +42,11 @@ public class GameModel {
     
     public boolean processRoll(int roll) {
         if (roll == 1) {
-            // Rolled a 1, lose turn score
             currentTurnScore = 0;
-            // IMPORTANT: Make sure game is not set to over when rolling a 1
             gameOver = false;
             switchTurns();
             return false;
         } else {
-            // Add roll to turn score
             currentTurnScore += roll;
             return true;
         }
