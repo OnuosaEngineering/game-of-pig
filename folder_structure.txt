@@ -1,0 +1,33 @@
+.
+├── folder_structure.txt
+├── pom.xml
+├── src
+│   └── main
+│       └── java
+│           └── edu
+│               └── wccnet
+│                   └── ionuosa
+│                       └── piggame
+│                           ├── GameHistoryService.java
+│                           ├── Main.java
+│                           ├── model
+│                           │   ├── GameModel.java
+│                           │   └── GameRecord.java
+│                           └── ui
+│                               ├── GameScreen.java
+│                               ├── HistoryScreen.java
+│                               ├── UIStyles.java
+│                               ├── WelcomeScreen.java
+│                               └── WinnerDialog.java
+└── target
+    ├── classes
+    ├── generated-sources
+    │   └── annotations
+    └── maven-status
+        └── maven-compiler-plugin
+            └── compile
+                └── default-compile
+                    ├── createdFiles.lst
+                    └── inputFiles.lst
+
+18 directories, 13 files
