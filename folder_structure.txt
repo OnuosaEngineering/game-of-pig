@@ -1,5 +1,7 @@
 .
+├── dependency-reduced-pom.xml
 ├── folder_structure.txt
+├── LICENSE
 ├── pom.xml
 ├── src
 │   └── main
@@ -21,6 +23,23 @@
 │                               └── WinnerDialog.java
 └── target
     ├── classes
+    │   └── edu
+    │       └── wccnet
+    │           └── ionuosa
+    │               └── piggame
+    │                   ├── GameHistoryService.class
+    │                   ├── Main.class
+    │                   ├── model
+    │                   │   ├── GameModel.class
+    │                   │   └── GameRecord.class
+    │                   └── ui
+    │                       ├── GameScreen.class
+    │                       ├── HistoryScreen.class
+    │                       ├── HistoryScreen$1.class
+    │                       ├── HistoryScreen$1$1.class
+    │                       ├── UIStyles.class
+    │                       ├── WelcomeScreen.class
+    │                       └── WinnerDialog.class
     ├── generated-sources
     │   └── annotations
     └── maven-status
@@ -30,4 +49,4 @@
                     ├── createdFiles.lst
                     └── inputFiles.lst
 
-18 directories, 13 files
+24 directories, 26 files
