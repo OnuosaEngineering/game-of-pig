@@ -47,7 +47,7 @@
                     <mainClass>edu.wccnet.ionuosa.piggame.Main</mainClass>
                     <options>
                         <option>--add-exports</option>
-                        <option>javafx.graphics/com.sun.javafx.application=ALL-UNAMED</option>
+                        <option>javafx.graphics/com.sun.javafx.application=ALL-UNNAMED</option>
                     </options>
                 </configuration>
             </plugin>

@@ -13,33 +13,56 @@ public class GameHistoryService {
     private List<GameRecord> gameHistory = new ArrayList<>();
     
     public void loadGameHistory() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(GAME_HISTORY_FILE))) {
-            Object readObject = ois.readObject();
-            if (readObject instanceof List) {
-                gameHistory = (List<GameRecord>) readObject;
+        try {
+            File historyFile = new File(GAME_HISTORY_FILE);
+            System.out.println("Looking for history file at: " + historyFile.getAbsolutePath());
+            System.out.println("File exists: " + historyFile.exists());
+            
+            if (historyFile.exists()) {
+                try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(historyFile))) {
+                    Object readObject = ois.readObject();
+                    if (readObject instanceof List) {
+                        gameHistory = (List<GameRecord>) readObject;
+                        System.out.println("Loaded " + gameHistory.size() + " game records");
+                    }
+                }
+            } else {
+                System.out.println("No history file found, starting with empty history");
+                gameHistory = new ArrayList<>();
             }
         } catch (FileNotFoundException e) {
+            System.out.println("History file not found, starting with empty history");
             gameHistory = new ArrayList<>();
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Error loading game history: " + e.getMessage());
+            e.printStackTrace();
             gameHistory = new ArrayList<>();
         }
     }
     
     public void saveGameHistory() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(GAME_HISTORY_FILE))) {
-            oos.writeObject(gameHistory);
+        try {
+            File historyFile = new File(GAME_HISTORY_FILE);
+            System.out.println("Saving " + gameHistory.size() + " game records to: " + historyFile.getAbsolutePath());
+            
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(historyFile))) {
+                oos.writeObject(gameHistory);
+                System.out.println("Game history saved successfully");
+            }
         } catch (IOException e) {
             System.err.println("Error saving game history: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
     public void addGameRecord(GameRecord record) {
+        System.out.println("Adding game record: " + record);
         gameHistory.add(record);
         saveGameHistory();
     }
     
     public List<GameRecord> getAllGameRecords() {
+        System.out.println("Getting all game records: " + gameHistory.size() + " records");
         return new ArrayList<>(gameHistory);
     }
     

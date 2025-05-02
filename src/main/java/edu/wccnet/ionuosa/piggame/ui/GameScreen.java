@@ -189,21 +189,17 @@ public class GameScreen {
     private void processRollResult(int roll) {
         boolean continueTurn = gameModel.processRoll(roll);
         
-        // Update display elements
         turnScoreLabel.setText("Current Turn: " + gameModel.getCurrentTurnScore());
         updatePlayerScoreLabels();
         
-        // Make absolutely sure game is not incorrectly marked as over when rolling a 1
         if (roll == 1) {
             gameModel.setGameOver(false);
         }
         
         if (continueTurn) {
-            // Turn continues - player rolled 2-6
             statusLabel.setText(gameModel.getCurrentPlayerName() + " rolled a " + roll + 
                               ". Roll again or hold?");
             
-            // Re-enable buttons
             rollButton.setDisable(false);
             holdButton.setDisable(false);
             
@@ -216,15 +212,12 @@ public class GameScreen {
                 timer.start();
             }
         } else {
-            // Turn ends - player rolled 1
             String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
             String nextPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer1Name() : gameModel.getPlayer2Name();
             statusLabel.setText(currentPlayerName + " rolled a 1! Turn over. " + nextPlayerName + "'s turn");
             
-            // Update player boxes to show the active player
             updatePlayerBoxes();
             
-            // Enable buttons after a small delay
             Timer enableButtonsTimer = new Timer(500, e -> {
                 ((Timer)e.getSource()).stop();
                 if (!gameModel.isGameOver()) {
@@ -235,7 +228,6 @@ public class GameScreen {
             enableButtonsTimer.setRepeats(false);
             enableButtonsTimer.start();
             
-            // If computer's turn, play after a delay
             if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
                 Timer timer = new Timer(1500, e -> {
                     ((Timer)e.getSource()).stop();
@@ -253,34 +245,42 @@ public class GameScreen {
     }
     
     private void holdTurn() {
-        boolean gameWon = gameModel.holdTurn();
+    System.out.println("Player holding turn. Player1: " + gameModel.isPlayer1Turn() + 
+                       ", Score: " + gameModel.getCurrentPlayerScore() + 
+                       ", TurnScore: " + gameModel.getCurrentTurnScore());
+    
+    boolean gameWon = gameModel.holdTurn();
+    
+    System.out.println("After holdTurn - gameWon: " + gameWon);
+    System.out.println("Player1Score: " + gameModel.getPlayer1Score() + 
+                       ", Player2Score: " + gameModel.getPlayer2Score());
+    
+    updatePlayerScoreLabels();
+    turnScoreLabel.setText("Current Turn: 0");
+    
+    if (gameWon) {
+        System.out.println("Game won! Calling endGame");
+        endGame(!gameModel.isPlayer1Turn());
+    } else {
+        String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
+        int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
+        statusLabel.setText(currentPlayerName + " holds with " + currentScore + 
+                          " points. " + gameModel.getCurrentPlayerName() + "'s turn");
         
-        updatePlayerScoreLabels();
-        turnScoreLabel.setText("Current Turn: 0");
+        updatePlayerBoxes();
         
-        if (gameWon) {
-            endGame(!gameModel.isPlayer1Turn());
-        } else {
-            String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
-            int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
-            statusLabel.setText(currentPlayerName + " holds with " + currentScore + 
-                              " points. " + gameModel.getCurrentPlayerName() + "'s turn");
-            
-            updatePlayerBoxes();
-            
-            // Enable buttons for next player
-            rollButton.setDisable(false);
-            holdButton.setDisable(false);
-            
-            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
-                Timer timer = new Timer(1000, e -> {
-                    ((Timer)e.getSource()).stop();
-                    playComputerTurn();
-                });
-                timer.setRepeats(false);
-                timer.start();
-            }
+        rollButton.setDisable(false);
+        holdButton.setDisable(false);
+        
+        if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
+            Timer timer = new Timer(1000, e -> {
+                ((Timer)e.getSource()).stop();
+                playComputerTurn();
+            });
+            timer.setRepeats(false);
+            timer.start();
         }
+    } 
     }
     
     private void updatePlayerBoxes() {
@@ -295,7 +295,7 @@ public class GameScreen {
         
         Timer timer = new Timer(800, e -> {
             ((Timer)e.getSource()).stop();
-            rollDice();
+            decideComputerMove();
         });
         timer.setRepeats(false);
         timer.start();
@@ -305,11 +305,13 @@ public class GameScreen {
         if (gameModel.shouldComputerHold()) {
             holdTurn();
         } else {
-            playComputerTurn();
+            rollDice();
         }
     }
     
     private void endGame(boolean player1Won) {
+        System.out.println("Game ending! Player1Won: " + player1Won);
+        
         String winnerName = player1Won ? gameModel.getPlayer1Name() : gameModel.getPlayer2Name();
         int winnerScore = player1Won ? gameModel.getPlayer1Score() : gameModel.getPlayer2Score();
         statusLabel.setText("Game Over! " + winnerName + " wins with " + winnerScore + " points!");
@@ -321,12 +323,18 @@ public class GameScreen {
                 (player1Won ? "Human vs Computer" : "Computer vs Human") :
                 "Human vs Human";
         
+        System.out.println("Creating game record: Winner=" + winnerName + 
+                          ", Score=" + winnerScore + 
+                          ", Type=" + gameType);
+        
         GameRecord record = new GameRecord(
             winnerName,
             winnerScore,
             LocalDateTime.now(),
             gameType
         );
+        
+        System.out.println("Calling historyService.addGameRecord()");
         historyService.addGameRecord(record);
         
         showWinnerDialog(player1Won);
