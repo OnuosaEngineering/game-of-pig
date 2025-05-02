@@ -262,8 +262,9 @@ public class GameScreen {
         
         if (gameWon) {
             System.out.println("Game won! Calling endGame");
-            boolean previousPlayerWasPlayer1 = !gameModel.isPlayer1Turn();
-            endGame(previousPlayerWasPlayer1);
+            boolean winningPlayerIsPlayer1 = gameModel.getPlayer1Score() >= GameModel.WINNING_SCORE;
+            System.out.println("Winning player is Player1: " + winningPlayerIsPlayer1);
+            endGame(winningPlayerIsPlayer1);
         } else {
             String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
             int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
