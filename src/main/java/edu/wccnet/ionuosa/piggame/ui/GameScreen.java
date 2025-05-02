@@ -17,7 +17,6 @@ import edu.wccnet.ionuosa.piggame.model.GameRecord;
 import javax.swing.Timer;
 import java.time.LocalDateTime;
 
-
 public class GameScreen {
     private final Stage stage;
     private final GameHistoryService historyService;
@@ -176,26 +175,39 @@ public class GameScreen {
                 int roll = gameModel.rollDice();
                 diceText.setText(UIStyles.getDieFace(roll));
                 diceText.setFill(roll == 1 ? Color.RED : UIStyles.THEME_COLORS[3]);
-                processRollResult(roll);
                 
-                if (!gameModel.isGameOver()) {
-                    rollButton.setDisable(false);
-                    holdButton.setDisable(false);
-                }
+                // Make sure game is not incorrectly marked as over
+                gameModel.setGameOver(false);
+                
+                processRollResult(roll);
             }
         });
         
         timer.start();
     }
+    
     private void processRollResult(int roll) {
         boolean continueTurn = gameModel.processRoll(roll);
+        
+        // Update display elements
         turnScoreLabel.setText("Current Turn: " + gameModel.getCurrentTurnScore());
         updatePlayerScoreLabels();
         
+        // Make absolutely sure game is not incorrectly marked as over when rolling a 1
+        if (roll == 1) {
+            gameModel.setGameOver(false);
+        }
+        
         if (continueTurn) {
+            // Turn continues - player rolled 2-6
             statusLabel.setText(gameModel.getCurrentPlayerName() + " rolled a " + roll + 
                               ". Roll again or hold?");
-            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
+            
+            // Re-enable buttons
+            rollButton.setDisable(false);
+            holdButton.setDisable(false);
+            
+            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn()) {
                 Timer timer = new Timer(1000, e -> {
                     ((Timer)e.getSource()).stop();
                     decideComputerMove();
@@ -204,13 +216,28 @@ public class GameScreen {
                 timer.start();
             }
         } else {
+            // Turn ends - player rolled 1
             String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
             String nextPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer1Name() : gameModel.getPlayer2Name();
             statusLabel.setText(currentPlayerName + " rolled a 1! Turn over. " + nextPlayerName + "'s turn");
+            
+            // Update player boxes to show the active player
             updatePlayerBoxes();
             
+            // Enable buttons after a small delay
+            Timer enableButtonsTimer = new Timer(500, e -> {
+                ((Timer)e.getSource()).stop();
+                if (!gameModel.isGameOver()) {
+                    rollButton.setDisable(false);
+                    holdButton.setDisable(false);
+                }
+            });
+            enableButtonsTimer.setRepeats(false);
+            enableButtonsTimer.start();
+            
+            // If computer's turn, play after a delay
             if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
-                Timer timer = new Timer(1000, e -> {
+                Timer timer = new Timer(1500, e -> {
                     ((Timer)e.getSource()).stop();
                     playComputerTurn();
                 });
@@ -232,7 +259,7 @@ public class GameScreen {
         turnScoreLabel.setText("Current Turn: 0");
         
         if (gameWon) {
-            endGame(gameModel.isPlayer1Turn());
+            endGame(!gameModel.isPlayer1Turn());
         } else {
             String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
             int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
@@ -240,6 +267,10 @@ public class GameScreen {
                               " points. " + gameModel.getCurrentPlayerName() + "'s turn");
             
             updatePlayerBoxes();
+            
+            // Enable buttons for next player
+            rollButton.setDisable(false);
+            holdButton.setDisable(false);
             
             if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
                 Timer timer = new Timer(1000, e -> {
