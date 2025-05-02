@@ -1,5 +1,8 @@
 package edu.wccnet.ionuosa.piggame.ui;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -10,11 +13,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import edu.wccnet.ionuosa.piggame.GameHistoryService;
 import edu.wccnet.ionuosa.piggame.model.GameModel;
 import edu.wccnet.ionuosa.piggame.model.GameRecord;
 
-import javax.swing.Timer;
 import java.time.LocalDateTime;
 
 public class GameScreen {
@@ -149,6 +152,12 @@ public class GameScreen {
         return playerBox;
     }
     
+    private void runLater(int delayMs, Runnable action) {
+        PauseTransition pause = new PauseTransition(Duration.millis(delayMs));
+        pause.setOnFinished(event -> action.run());
+        pause.play();
+    }
+    
     private void rollDice() {
         rollButton.setDisable(true);
         holdButton.setDisable(true);
@@ -162,32 +171,38 @@ public class GameScreen {
         
         Text diceText = (Text) diceDisplay.getChildren().get(0);
         
-        Timer timer = new Timer(50, e -> {
-            if (frameCount[0] < totalFrames) {
-                int randomIndex = (int) (Math.random() * 6);
-                diceText.setText(UIStyles.DICE_FACES[randomIndex]);
-                diceText.setFill(UIStyles.THEME_COLORS[frameCount[0] % UIStyles.THEME_COLORS.length]);
-                
-                frameCount[0]++;
-            } else {
-                ((Timer)e.getSource()).stop();
-                
-                int roll = gameModel.rollDice();
-                diceText.setText(UIStyles.getDieFace(roll));
-                diceText.setFill(roll == 1 ? Color.RED : UIStyles.THEME_COLORS[3]);
-                
-                // Make sure game is not incorrectly marked as over
-                gameModel.setGameOver(false);
-                
-                processRollResult(roll);
-            }
-        });
+        Timeline timeline = new Timeline(
+            new KeyFrame(Duration.millis(50), e -> {
+                if (frameCount[0] < totalFrames) {
+                    int randomIndex = (int) (Math.random() * 6);
+                    diceText.setText(UIStyles.DICE_FACES[randomIndex]);
+                    diceText.setFill(UIStyles.THEME_COLORS[frameCount[0] % UIStyles.THEME_COLORS.length]);
+                    
+                    frameCount[0]++;
+                } else {
+                    int roll = gameModel.rollDice();
+                    diceText.setText(UIStyles.getDieFace(roll));
+                    diceText.setFill(roll == 1 ? Color.RED : UIStyles.THEME_COLORS[3]);
+                    
+                    gameModel.setGameOver(false);
+                    
+                    processRollResult(roll);
+                }
+            })
+        );
         
-        timer.start();
+        timeline.setCycleCount(totalFrames + 1);
+        timeline.play();
     }
     
     private void processRollResult(int roll) {
+        System.out.println("Processing roll result: " + roll);
+        System.out.println("Before processRoll - Player1Turn: " + gameModel.isPlayer1Turn());
+        
         boolean continueTurn = gameModel.processRoll(roll);
+        
+        System.out.println("After processRoll - Player1Turn: " + gameModel.isPlayer1Turn());
+        System.out.println("Continue turn: " + continueTurn);
         
         turnScoreLabel.setText("Current Turn: " + gameModel.getCurrentTurnScore());
         updatePlayerScoreLabels();
@@ -203,13 +218,8 @@ public class GameScreen {
             rollButton.setDisable(false);
             holdButton.setDisable(false);
             
-            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn()) {
-                Timer timer = new Timer(1000, e -> {
-                    ((Timer)e.getSource()).stop();
-                    decideComputerMove();
-                });
-                timer.setRepeats(false);
-                timer.start();
+            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
+                runLater(1000, this::decideComputerMove);
             }
         } else {
             String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
@@ -218,23 +228,15 @@ public class GameScreen {
             
             updatePlayerBoxes();
             
-            Timer enableButtonsTimer = new Timer(500, e -> {
-                ((Timer)e.getSource()).stop();
+            runLater(500, () -> {
                 if (!gameModel.isGameOver()) {
                     rollButton.setDisable(false);
                     holdButton.setDisable(false);
                 }
             });
-            enableButtonsTimer.setRepeats(false);
-            enableButtonsTimer.start();
             
             if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
-                Timer timer = new Timer(1500, e -> {
-                    ((Timer)e.getSource()).stop();
-                    playComputerTurn();
-                });
-                timer.setRepeats(false);
-                timer.start();
+                runLater(1500, this::playComputerTurn);
             }
         }
     }
@@ -245,42 +247,38 @@ public class GameScreen {
     }
     
     private void holdTurn() {
-    System.out.println("Player holding turn. Player1: " + gameModel.isPlayer1Turn() + 
-                       ", Score: " + gameModel.getCurrentPlayerScore() + 
-                       ", TurnScore: " + gameModel.getCurrentTurnScore());
-    
-    boolean gameWon = gameModel.holdTurn();
-    
-    System.out.println("After holdTurn - gameWon: " + gameWon);
-    System.out.println("Player1Score: " + gameModel.getPlayer1Score() + 
-                       ", Player2Score: " + gameModel.getPlayer2Score());
-    
-    updatePlayerScoreLabels();
-    turnScoreLabel.setText("Current Turn: 0");
-    
-    if (gameWon) {
-        System.out.println("Game won! Calling endGame");
-        endGame(!gameModel.isPlayer1Turn());
-    } else {
-        String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
-        int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
-        statusLabel.setText(currentPlayerName + " holds with " + currentScore + 
-                          " points. " + gameModel.getCurrentPlayerName() + "'s turn");
+        System.out.println("Player holding turn. Player1: " + gameModel.isPlayer1Turn() + 
+                         ", Score: " + gameModel.getCurrentPlayerScore() + 
+                         ", TurnScore: " + gameModel.getCurrentTurnScore());
         
-        updatePlayerBoxes();
+        boolean gameWon = gameModel.holdTurn();
         
-        rollButton.setDisable(false);
-        holdButton.setDisable(false);
+        System.out.println("After holdTurn - gameWon: " + gameWon);
+        System.out.println("Player1Score: " + gameModel.getPlayer1Score() + 
+                         ", Player2Score: " + gameModel.getPlayer2Score());
         
-        if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
-            Timer timer = new Timer(1000, e -> {
-                ((Timer)e.getSource()).stop();
-                playComputerTurn();
-            });
-            timer.setRepeats(false);
-            timer.start();
+        updatePlayerScoreLabels();
+        turnScoreLabel.setText("Current Turn: 0");
+        
+        if (gameWon) {
+            System.out.println("Game won! Calling endGame");
+            boolean previousPlayerWasPlayer1 = !gameModel.isPlayer1Turn();
+            endGame(previousPlayerWasPlayer1);
+        } else {
+            String currentPlayerName = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Name() : gameModel.getPlayer1Name();
+            int currentScore = gameModel.isPlayer1Turn() ? gameModel.getPlayer2Score() : gameModel.getPlayer1Score();
+            statusLabel.setText(currentPlayerName + " holds with " + currentScore + 
+                              " points. " + gameModel.getCurrentPlayerName() + "'s turn");
+            
+            updatePlayerBoxes();
+            
+            rollButton.setDisable(false);
+            holdButton.setDisable(false);
+            
+            if (gameModel.isComputerOpponent() && !gameModel.isPlayer1Turn() && !gameModel.isGameOver()) {
+                runLater(1000, this::playComputerTurn);
+            }
         }
-    } 
     }
     
     private void updatePlayerBoxes() {
@@ -293,19 +291,14 @@ public class GameScreen {
         rollButton.setDisable(true);
         holdButton.setDisable(true);
         
-        Timer timer = new Timer(800, e -> {
-            ((Timer)e.getSource()).stop();
-            decideComputerMove();
-        });
-        timer.setRepeats(false);
-        timer.start();
+        runLater(800, this::rollDice);
     }
     
     private void decideComputerMove() {
         if (gameModel.shouldComputerHold()) {
             holdTurn();
         } else {
-            rollDice();
+            playComputerTurn();
         }
     }
     
@@ -324,8 +317,8 @@ public class GameScreen {
                 "Human vs Human";
         
         System.out.println("Creating game record: Winner=" + winnerName + 
-                          ", Score=" + winnerScore + 
-                          ", Type=" + gameType);
+                         ", Score=" + winnerScore + 
+                         ", Type=" + gameType);
         
         GameRecord record = new GameRecord(
             winnerName,
